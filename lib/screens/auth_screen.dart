@@ -52,7 +52,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void dispose() { _matricule.dispose(); _name.dispose(); _phone.dispose(); _pin.dispose(); _coordinatorCode.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: GestureDetector(behavior: HitTestBehavior.opaque, onLongPress: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const DesignPreviewScreen())), child: Text(_register ? 'Create account' : 'EZY sign in'))), body: Form(key: _form, child: ListView(padding: const EdgeInsets.all(24), children: [
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: GestureDetector(behavior: HitTestBehavior.opaque, onLongPress: _register ? null : () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const DesignPreviewScreen())), child: Text(_register ? 'Create account' : 'EZY sign in'))), body: Form(key: _form, child: ListView(padding: const EdgeInsets.all(24), children: [
     TextFormField(controller: _matricule, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Matricule'), validator: _required),
     if (_register) ...[
       TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Full name'), validator: _required),
