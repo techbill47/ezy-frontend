@@ -11,7 +11,7 @@ class StartSessionScreen extends StatefulWidget {
 }
 class _StartSessionScreenState extends State<StartSessionScreen> {
   List<Map<String, dynamic>> _courses = [];
-  String? _courseId, _error;
+  String? _courseId, _error, _notice;
   int? _duration = 60;
   final _customDuration = TextEditingController();
   bool _loading = true, _starting = false;
@@ -48,6 +48,7 @@ class _StartSessionScreenState extends State<StartSessionScreen> {
       if (!mounted) return;
       final selected = _courses.firstWhere((c) => '${c['id']}' == '${session['courseId'] ?? (session['course'] is Map ? session['course']['id'] : _courseId)}', orElse: () => session['course'] is Map ? Map<String, dynamic>.from(session['course']) : {'id': _courseId, 'code': 'Course', 'name': ''});
       await navigator.push(MaterialPageRoute<void>(builder: (_) => LiveSessionScreen(session: session, course: selected, user: user!, resumed: session['_activeSession'] == true)));
+      if (mounted) setState(() => _notice = 'The live session screen was closed, so its BLE broadcast stopped. Tap Start session to resume an active session.');
     } catch (error) { if (mounted) setState(() => _error = error is ApiException && error.statusCode == null ? 'Cannot start a session without internet. The coordinator needs internet only to start the session. ${error.message}' : error.toString()); }
     finally { if (mounted) setState(() => _starting = false); }
   }
@@ -57,6 +58,7 @@ class _StartSessionScreenState extends State<StartSessionScreen> {
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Start session')), body: _loading ? const Center(child: CircularProgressIndicator()) : RefreshIndicator(onRefresh: _loadCourses, child: ListView(padding: const EdgeInsets.all(20), children: [
     if (_courses.isEmpty && _error == null) const Text('No courses are available. Add a course before starting a session.'),
     if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+    if (_notice != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_notice!)),
     if (_courses.isNotEmpty) DropdownButtonFormField<String>(isExpanded: true, initialValue: _courseId, decoration: const InputDecoration(labelText: 'Course'), items: _courses.map((c) => DropdownMenuItem(value: '${c['id']}', child: Text('${c['code']} — ${c['name']}', overflow: TextOverflow.ellipsis))).toList(), onChanged: _starting ? null : (v) => setState(() => _courseId = v)),
     const SizedBox(height: 18), Text('Duration (minutes)', style: Theme.of(context).textTheme.titleMedium),
     Wrap(spacing: 8, children: [for (final minutes in [30, 60, 90, 120]) ChoiceChip(label: Text('$minutes'), selected: _duration == minutes, onSelected: _starting ? null : (_) => setState(() { _duration = minutes; _customDuration.clear(); }))]),
