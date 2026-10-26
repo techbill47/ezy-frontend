@@ -78,6 +78,7 @@ class BleService {
     final serviceGuid = Guid(ezyServiceUuid);
     SessionSignal? best;
     var foundAnySignal = false;
+    Object? scanError;
     final subscription = FlutterBluePlus.onScanResults.listen((results) {
       for (final result in results) {
         final payload = result.advertisementData.serviceData[serviceGuid];
@@ -88,10 +89,11 @@ class BleService {
         if (payload[0] != departmentId || payload[1] != year) { heardOtherClass = true; continue; }
         if (best == null || result.rssi > best!.rssi) best = SessionSignal(departmentId: payload[0], year: payload[1], code: code, rssi: result.rssi, detectedAt: DateTime.now());
       }
-    }, onError: (Object error) { throw BleServiceException('Bluetooth scan failed: $error'); });
+    }, onError: (Object error) { scanError = error; });
     _scanning = true;
     try {
       await FlutterBluePlus.startScan(withServices: [serviceGuid], timeout: const Duration(seconds: 10), oneByOne: true);
+      if (scanError != null) throw BleServiceException('Bluetooth scan failed: $scanError');
       return best;
     } catch (error) {
       throw BleServiceException('Bluetooth scan failed: $error');
