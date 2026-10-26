@@ -2,13 +2,15 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/api_client.dart';
-import '../health_screen.dart';
 import '../models/app_user.dart';
 import '../services/session_service.dart';
-import 'ble_test_screen.dart';
+import '../widgets/app_scaffold.dart';
+import '../widgets/buttons.dart';
+import '../widgets/offline_banner.dart';
+import '../widgets/surfaces.dart';
 import 'courses_screen.dart';
-import 'start_session_screen.dart';
 import 'past_sessions_screen.dart';
+import 'start_session_screen.dart';
 import 'student_home_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,16 +18,26 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+
 class _HomeScreenState extends State<HomeScreen> {
   static final Map<int, String> _departmentNameCache = {};
   bool _departmentLoading = false;
+  String? _departmentName, _departmentError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _refreshIfOnline();
+      await _ensureDepartmentName();
+    });
+  }
+
   Future<void> _logout() async {
     await context.read<SessionService>().clear();
     if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
   }
-  String? _departmentName, _departmentError;
-  @override
-  void initState() { super.initState(); WidgetsBinding.instance.addPostFrameCallback((_) async { await _refreshIfOnline(); await _ensureDepartmentName(); }); }
+
   Future<void> _refreshIfOnline() async {
     final session = context.read<SessionService>();
     try {
@@ -38,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (_) { /* Keep the saved profile when refresh is unavailable. */ }
   }
+
   Future<void> _ensureDepartmentName() async {
     final session = context.read<SessionService>();
     final user = session.user;
@@ -68,21 +81,29 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _departmentError = 'Could not load department name: $error');
     } finally { if (mounted) setState(() => _departmentLoading = false); }
   }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<SessionService>().user;
     if (user?.role == 'student') return StudentHomeScreen(user: user!);
-    return Scaffold(appBar: AppBar(title: const Text('EZY'), actions: [TextButton(onPressed: _logout, child: const Text('Logout'))]), body: ListView(padding: const EdgeInsets.all(24), children: [
-      Text(user?.fullName ?? 'User', style: Theme.of(context).textTheme.headlineSmall),
-      const SizedBox(height: 20),
-      _detail('Matricule', user?.matricule), _detail('Role', user?.role), _detail('Department', _departmentLoading ? 'Loading…' : _departmentName ?? _departmentError ?? user?.departmentName), _detail('Year', user?.year.toString()),
-      const SizedBox(height: 24),
-      if (user?.role == 'coordinator') SizedBox(height: 64, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const StartSessionScreen())), child: const Text('Start session', style: TextStyle(fontSize: 20)))),
-      if (user?.role == 'coordinator') SizedBox(height: 56, child: OutlinedButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => PastSessionsScreen(user: user!))), child: const Text('Past sessions'))),
-      SizedBox(height: 56, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const CoursesScreen())), child: const Text('My courses'))),
-      SizedBox(height: 56, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const HealthScreen())), child: const Text('Connection check'))),
-      OutlinedButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const BleTestScreen())), child: const Text('BLE test')),
-    ]));
+    final firstName = user?.fullName.trim().split(RegExp(r'\s+')).first ?? 'Coordinator';
+    final department = _departmentLoading ? 'Loading department…' : _departmentName ?? user?.departmentName ?? 'Department unavailable';
+    return AppScaffold(
+      appBar: AppBar(title: const Text('EZY'), actions: [TextButton(onPressed: _logout, child: const Text('Logout'))]),
+      body: Column(children: [
+        OfflineBanner(role: user?.role ?? 'coordinator'),
+        Expanded(child: ListView(padding: const EdgeInsets.fromLTRB(22, 26, 22, 28), children: [
+          Text('Hello, $firstName', style: Theme.of(context).textTheme.headlineLarge),
+          const SizedBox(height: 12),
+          Align(alignment: Alignment.centerLeft, child: StatusPill(label: '$department  •  Year ${user?.year ?? ''}', kind: StatusKind.info, icon: Icons.school_outlined)),
+          if (_departmentError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_departmentError!, style: Theme.of(context).textTheme.bodySmall)),
+          const SizedBox(height: 32),
+          PrimaryButton(label: 'Start session', icon: Icons.sensors, onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const StartSessionScreen()))),
+          const SizedBox(height: 18),
+          AppCard(onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => PastSessionsScreen(user: user!))), child: const Row(children: [Icon(Icons.history), SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Past sessions'), SizedBox(height: 3), Text('Review attendance and export sheets')])), Icon(Icons.chevron_right)])),
+          AppCard(onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const CoursesScreen())), child: const Row(children: [Icon(Icons.menu_book_outlined), SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('My courses'), SizedBox(height: 3), Text('View your class courses')])), Icon(Icons.chevron_right)])),
+        ])),
+      ]),
+    );
   }
-  Widget _detail(String title, String? value) => ListTile(contentPadding: EdgeInsets.zero, title: Text(title), subtitle: Text(value?.isNotEmpty == true ? value! : 'Unavailable'));
 }
