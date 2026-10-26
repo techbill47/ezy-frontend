@@ -28,6 +28,9 @@ class BleService {
   bool _advertising = false;
   bool _scanning = false;
   bool heardOtherClass = false;
+  int lastScanAdvertisementsSeen = 0;
+  int lastScanEzyAdvertisementsSeen = 0;
+  int lastScanDevicesSeen = 0;
 
   Future<bool> _requestPermissions(BuildContext context, {required bool advertise}) async {
     final message = 'EZY needs Bluetooth ${advertise ? 'advertise, ' : ''}scan and connect access to ${advertise ? 'broadcast this session code' : 'find your class session'}.${Platform.isAndroid ? ' On Android 11 or older, location access is also needed for BLE scanning.' : ''}';
@@ -73,16 +76,24 @@ class BleService {
 
   Future<SessionSignal?> scanForSession(BuildContext context, int departmentId, int year) async {
     heardOtherClass = false;
+    lastScanAdvertisementsSeen = 0;
+    lastScanEzyAdvertisementsSeen = 0;
+    lastScanDevicesSeen = 0;
     await _requestPermissions(context, advertise: false);
     await _checkBluetooth();
     final serviceGuid = Guid(ezyServiceUuid);
     SessionSignal? best;
     var foundAnySignal = false;
     Object? scanError;
+    final devicesSeen = <String>{};
     final subscription = FlutterBluePlus.onScanResults.listen((results) {
       for (final result in results) {
+        lastScanAdvertisementsSeen++;
+        devicesSeen.add(result.device.remoteId.toString());
         final payload = result.advertisementData.serviceData[serviceGuid];
-        if (payload == null || payload.length != 8) continue;
+        if (payload == null) continue;
+        lastScanEzyAdvertisementsSeen++;
+        if (payload.length != 8) continue;
         final code = ascii.decode(payload.sublist(2), allowInvalid: true);
         if (!RegExp(r'^[A-Z2-9]{6}$').hasMatch(code)) continue;
         foundAnySignal = true;
@@ -92,9 +103,15 @@ class BleService {
     }, onError: (Object error) { scanError = error; });
     _scanning = true;
     try {
-      await FlutterBluePlus.startScan(withServices: [serviceGuid], timeout: const Duration(seconds: 10), oneByOne: true);
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10), oneByOne: true);
       if (scanError != null) throw BleServiceException('Bluetooth scan failed: $scanError');
+      lastScanDevicesSeen = devicesSeen.length;
+      if (best == null && lastScanEzyAdvertisementsSeen == 0) {
+        throw BleServiceException('Bluetooth saw ${devicesSeen.length} devices ($lastScanAdvertisementsSeen advertisements), but none was an EZY session (0 carried EZY service data).');
+      }
       return best;
+    } on BleServiceException {
+      rethrow;
     } catch (error) {
       throw BleServiceException('Bluetooth scan failed: $error');
     } finally {
