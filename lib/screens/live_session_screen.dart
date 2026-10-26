@@ -41,6 +41,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> with WidgetsBindi
     if (_endsAt != null && !_ended && !_endsAt!.isAfter(DateTime.now())) {
       setState(() { _ended = true; _broadcasting = false; _notice = 'Session time is over. Advertising stopped.'; });
       _ble.stopAdvertising();
+      WakelockPlus.disable();
     } else if (mounted) {
       setState(() {});
     }
@@ -72,6 +73,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> with WidgetsBindi
     try {
       await ApiClient(token: context.read<SessionService>().token).post('/api/sessions/$_id/end');
       await _ble.stopAdvertising();
+      await WakelockPlus.disable();
       if (mounted) setState(() { _ended = true; _broadcasting = false; _notice = 'Session ended.'; });
     } catch (error) { if (mounted) setState(() => _error = 'Could not end the session: $error'); }
     finally { if (mounted) setState(() => _busy = false); }
