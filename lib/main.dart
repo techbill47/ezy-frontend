@@ -4,6 +4,7 @@ import 'services/session_service.dart';
 import 'services/queue_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() => runApp(MultiProvider(providers: [ChangeNotifierProvider(create: (_) => SessionService()..load()), ChangeNotifierProvider(create: (_) => QueueService())], child: const EzyApp()));
 
@@ -19,21 +20,11 @@ class _EzyAppState extends State<EzyApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'EZY',
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF1E5BD8),
-        surface: Colors.white,
-      ),
-      scaffoldBackgroundColor: Colors.white,
-      useMaterial3: true,
-      pageTransitionsTheme: const PageTransitionsTheme(builders: {TargetPlatform.android: _NoTransitionsBuilder()}),
-    ),
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.light,
+    darkTheme: AppTheme.dark,
+    themeMode: ThemeMode.dark,
     home: Consumer<SessionService>(builder: (context, session, _) => !session.ready ? const Scaffold(body: Center(child: CircularProgressIndicator())) : session.token != null ? const HomeScreen() : const AuthScreen()),
   );
 }
 
-class _NoTransitionsBuilder extends PageTransitionsBuilder {
-  const _NoTransitionsBuilder();
-  @override
-  Widget buildTransitions<T>(Route<T> route, BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => child;
-}
