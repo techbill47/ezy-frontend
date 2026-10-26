@@ -23,6 +23,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _marking = false;
   bool _departmentLoading = false;
   String? _markMessage, _markError;
+  Future<void> _logout() async {
+    await context.read<SessionService>().clear();
+    if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+  }
   String? _departmentName, _departmentError;
   @override
   void initState() { super.initState(); WidgetsBinding.instance.addPostFrameCallback((_) async { await _refreshIfOnline(); await _ensureDepartmentName(); }); }
@@ -89,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<SessionService>().user;
     final queue = context.watch<QueueService>();
-    return Scaffold(appBar: AppBar(title: const Text('EZY'), actions: [TextButton(onPressed: () => context.read<SessionService>().clear(), child: const Text('Logout'))]), body: ListView(padding: const EdgeInsets.all(24), children: [
+    return Scaffold(appBar: AppBar(title: const Text('EZY'), actions: [TextButton(onPressed: _logout, child: const Text('Logout'))]), body: ListView(padding: const EdgeInsets.all(24), children: [
       Text(user?.fullName ?? 'User', style: Theme.of(context).textTheme.headlineSmall),
       const SizedBox(height: 20),
       _detail('Matricule', user?.matricule), _detail('Role', user?.role), _detail('Department', _departmentLoading ? 'Loading…' : _departmentName ?? _departmentError ?? user?.departmentName), _detail('Year', user?.year.toString()),

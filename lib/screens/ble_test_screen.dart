@@ -8,6 +8,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/ble_service.dart' show ezyServiceUuid;
+import 'design_preview_screen.dart';
 
 const int _testManufacturerId = 0xffff;
 const _nativeBle = MethodChannel('ezy/ble_test');
@@ -474,7 +475,7 @@ class _BleTestScreenState extends State<BleTestScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('EZY BLE test')),
+    appBar: AppBar(title: GestureDetector(behavior: HitTestBehavior.opaque, onLongPress: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const DesignPreviewScreen())), child: const Text('EZY BLE test'))),
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [

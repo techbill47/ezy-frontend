@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/session_service.dart';
 import 'services/queue_service.dart';
+import 'screens/entry_splash_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
@@ -24,7 +25,8 @@ class _EzyAppState extends State<EzyApp> {
     theme: AppTheme.light,
     darkTheme: AppTheme.dark,
     themeMode: ThemeMode.dark,
-    home: Consumer<SessionService>(builder: (context, session, _) => !session.ready ? const Scaffold(body: Center(child: CircularProgressIndicator())) : session.token != null ? const HomeScreen() : const AuthScreen()),
+    routes: {'/login': (_) => const AuthScreen(), '/home': (_) => const HomeScreen()},
+    home: const EntrySplashScreen(),
   );
 }
 

@@ -48,7 +48,7 @@ class InfoRow extends StatelessWidget {
 }
 
 class AppTextField extends StatelessWidget {
-  const AppTextField({super.key, required this.label, this.controller, this.hint, this.obscureText = false, this.keyboardType, this.validator, this.prefixIcon, this.onChanged});
+  const AppTextField({super.key, required this.label, this.controller, this.hint, this.obscureText = false, this.keyboardType, this.validator, this.prefixIcon, this.suffixIcon, this.onChanged, this.textCapitalization = TextCapitalization.none, this.maxLength});
   final String label;
   final TextEditingController? controller;
   final String? hint;
@@ -56,7 +56,10 @@ class AppTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final IconData? prefixIcon;
+  final Widget? suffixIcon;
   final ValueChanged<String>? onChanged;
+  final TextCapitalization textCapitalization;
+  final int? maxLength;
   @override
-  Widget build(BuildContext context) => TextFormField(controller: controller, obscureText: obscureText, keyboardType: keyboardType, validator: validator, onChanged: onChanged, decoration: InputDecoration(labelText: label, hintText: hint, prefixIcon: prefixIcon == null ? null : Icon(prefixIcon)));
+  Widget build(BuildContext context) => TextFormField(controller: controller, obscureText: obscureText, keyboardType: keyboardType, validator: validator, onChanged: onChanged, textCapitalization: textCapitalization, maxLength: maxLength, decoration: InputDecoration(labelText: label, hintText: hint, prefixIcon: prefixIcon == null ? null : Icon(prefixIcon), suffixIcon: suffixIcon, counterText: maxLength == null ? null : ''));
 }
