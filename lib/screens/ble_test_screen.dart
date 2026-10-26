@@ -7,8 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../services/ble_service.dart' show ezyServiceUuid;
 
-const String ezyServiceUuid = '7f510001-1b15-4f0d-8b87-55a2d4e93c01';
 const int _testManufacturerId = 0xffff;
 const _nativeBle = MethodChannel('ezy/ble_test');
 

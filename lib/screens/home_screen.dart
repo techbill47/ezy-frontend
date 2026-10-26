@@ -7,6 +7,7 @@ import '../models/app_user.dart';
 import '../services/session_service.dart';
 import 'ble_test_screen.dart';
 import 'courses_screen.dart';
+import 'start_session_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
       const SizedBox(height: 20),
       _detail('Matricule', user?.matricule), _detail('Role', user?.role), _detail('Department', user?.departmentName), _detail('Year', user?.year.toString()),
       const SizedBox(height: 24),
+      if (user?.role == 'coordinator') SizedBox(height: 64, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const StartSessionScreen())), child: const Text('Start session', style: TextStyle(fontSize: 20)))),
+      if (user?.role == 'student') SizedBox(height: 64, child: FilledButton(onPressed: () {}, child: const Text('Mark attendance', style: TextStyle(fontSize: 20)))),
       SizedBox(height: 56, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const CoursesScreen())), child: const Text('My courses'))),
       SizedBox(height: 56, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const HealthScreen())), child: const Text('Connection check'))),
       OutlinedButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const BleTestScreen())), child: const Text('BLE test')),

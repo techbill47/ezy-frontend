@@ -41,6 +41,7 @@ dependencies:
   flutter_blue_plus: ^2.3.14
   flutter_ble_peripheral: ^3.1.0
   permission_handler: 12.0.1
+  wakelock_plus: ^1.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

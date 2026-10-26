@@ -5,8 +5,9 @@ import 'package:http/http.dart' as http;
 import '../config.dart';
 
 class ApiException implements Exception {
-  ApiException(this.message);
+  ApiException(this.message, {this.statusCode});
   final String message;
+  final int? statusCode;
   @override
   String toString() => message;
 }
@@ -32,7 +33,7 @@ class ApiClient {
       try { decoded = response.body.isEmpty ? null : jsonDecode(response.body); } catch (_) { decoded = null; }
       if (response.statusCode < 200 || response.statusCode >= 300) {
         final message = decoded is Map ? decoded['error']?.toString() : null;
-        throw ApiException(message?.isNotEmpty == true ? message! : 'Server error (${response.statusCode}). Please try again.');
+        throw ApiException(message?.isNotEmpty == true ? message! : 'Server error (${response.statusCode}). Please try again.', statusCode: response.statusCode);
       }
       return decoded;
     } on ApiException { rethrow; }
