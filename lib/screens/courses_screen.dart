@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/api_client.dart';
 import '../services/session_service.dart';
+import 'marks_conversion_screen.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
@@ -51,7 +52,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   Widget build(BuildContext context) {
     final isCoordinator = context.watch<SessionService>().user?.role == 'coordinator';
     return Scaffold(appBar: AppBar(title: const Text('Courses')), floatingActionButton: isCoordinator ? FloatingActionButton.extended(onPressed: _saving ? null : _showAddForm, icon: const Icon(Icons.add), label: const Text('Add course')) : null,
-      body: RefreshIndicator(onRefresh: _load, child: _loading ? ListView(children: const [SizedBox(height: 250), Center(child: CircularProgressIndicator())]) : _error != null ? ListView(padding: const EdgeInsets.all(24), children: [Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)), const SizedBox(height: 12), OutlinedButton(onPressed: _load, child: const Text('Retry'))]) : _courses.isEmpty ? ListView(children: const [SizedBox(height: 180), Center(child: Text('No courses yet.'))]) : ListView.separated(padding: const EdgeInsets.all(16), itemCount: _courses.length, separatorBuilder: (_, _) => const Divider(), itemBuilder: (context, i) { final course = _courses[i]; return ListTile(title: Text('${course['code'] ?? ''}'), subtitle: Text('${course['name'] ?? ''}')); })),
+      body: RefreshIndicator(onRefresh: _load, child: _loading ? ListView(children: const [SizedBox(height: 250), Center(child: CircularProgressIndicator())]) : _error != null ? ListView(padding: const EdgeInsets.all(24), children: [Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)), const SizedBox(height: 12), OutlinedButton(onPressed: _load, child: const Text('Retry'))]) : _courses.isEmpty ? ListView(children: const [SizedBox(height: 180), Center(child: Text('No courses yet.'))]) : ListView.separated(padding: const EdgeInsets.all(16), itemCount: _courses.length, separatorBuilder: (_, _) => const Divider(), itemBuilder: (context, i) { final course = _courses[i]; return ListTile(title: Text('${course['code'] ?? ''}'), subtitle: Text('${course['name'] ?? ''}'), trailing: isCoordinator ? TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => MarksConversionScreen(course: course, user: context.read<SessionService>().user!))), child: const Text('Convert to marks')) : null); })),
     );
   }
 }
