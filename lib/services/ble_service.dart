@@ -74,7 +74,7 @@ class BleService {
     _advertising = false;
   }
 
-  Future<SessionSignal?> scanForSession(BuildContext context, int departmentId, int year) async {
+  Future<SessionSignal?> scanForSession(BuildContext context, int departmentId, int year, {VoidCallback? onListening}) async {
     heardOtherClass = false;
     lastScanAdvertisementsSeen = 0;
     lastScanEzyAdvertisementsSeen = 0;
@@ -103,6 +103,7 @@ class BleService {
     }, onError: (Object error) { scanError = error; });
     _scanning = true;
     try {
+      onListening?.call();
       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10), oneByOne: true);
       if (scanError != null) throw BleServiceException('Bluetooth scan failed: $scanError');
       lastScanDevicesSeen = devicesSeen.length;

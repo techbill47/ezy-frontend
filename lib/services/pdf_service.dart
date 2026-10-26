@@ -40,4 +40,25 @@ class PdfService {
     ));
     return doc.save();
   }
+
+  static Future<List<int>> proofOfAttendance({required String matricule, required String fullName, required String course, required DateTime detectedAt, required String sessionCode, required String status}) async {
+    final doc = pw.Document();
+    final generatedAt = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+    doc.addPage(pw.Page(pageFormat: PdfPageFormat.a4, margin: const pw.EdgeInsets.all(40), build: (_) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+      pw.Text('EZY Proof of Attendance', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+      pw.SizedBox(height: 28),
+      _proofRow('Matricule', matricule),
+      _proofRow('Name', fullName),
+      _proofRow('Course', course),
+      _proofRow('Date and time', DateFormat('yyyy-MM-dd HH:mm:ss').format(detectedAt.toLocal())),
+      _proofRow('Session code', sessionCode),
+      _proofRow('Status', status),
+      pw.Spacer(),
+      pw.Divider(color: PdfColors.grey400),
+      pw.Align(alignment: pw.Alignment.centerRight, child: pw.Text('Generated $generatedAt', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700))),
+    ])));
+    return doc.save();
+  }
+
+  static pw.Widget _proofRow(String label, String value) => pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 9), child: pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [pw.SizedBox(width: 115, child: pw.Text(label, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))), pw.Expanded(child: pw.Text(value))]));
 }
