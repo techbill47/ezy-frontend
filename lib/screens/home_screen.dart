@@ -10,6 +10,7 @@ import '../services/session_service.dart';
 import 'ble_test_screen.dart';
 import 'courses_screen.dart';
 import 'start_session_screen.dart';
+import 'past_sessions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -57,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _detail('Matricule', user?.matricule), _detail('Role', user?.role), _detail('Department', user?.departmentName), _detail('Year', user?.year.toString()),
       const SizedBox(height: 24),
       if (user?.role == 'coordinator') SizedBox(height: 64, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const StartSessionScreen())), child: const Text('Start session', style: TextStyle(fontSize: 20)))),
+      if (user?.role == 'coordinator') SizedBox(height: 56, child: OutlinedButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => PastSessionsScreen(user: user!))), child: const Text('Past sessions'))),
       if (user?.role == 'student') ...[
         SizedBox(height: 64, child: FilledButton(onPressed: _marking ? null : _markAttendance, child: _marking ? const CircularProgressIndicator() : const Text('Mark attendance', style: TextStyle(fontSize: 20)))),
         if (_markMessage != null) Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Text(_markMessage!, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold))),

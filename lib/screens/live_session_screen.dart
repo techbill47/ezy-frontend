@@ -6,6 +6,7 @@ import '../api/api_client.dart';
 import '../models/app_user.dart';
 import '../services/ble_service.dart';
 import '../services/session_service.dart';
+import 'session_report_screen.dart';
 
 class LiveSessionScreen extends StatefulWidget {
   const LiveSessionScreen({super.key, required this.session, required this.course, required this.user, required this.resumed});
@@ -112,6 +113,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> with WidgetsBindi
       const SizedBox(height: 18), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Present: $present / ${_students.length}', style: Theme.of(context).textTheme.titleMedium), IconButton(onPressed: _loadReport, icon: const Icon(Icons.refresh), tooltip: 'Refresh attendance')]),
       if (_reportLoading && _students.isEmpty) const Center(child: CircularProgressIndicator()) else if (_students.isEmpty) const Text('No students in this class yet.') else ..._students.map((s) => ListTile(leading: Icon(s['present'] == true ? Icons.check_circle : Icons.radio_button_unchecked, color: s['present'] == true ? Colors.green : null), title: Text('${s['fullName'] ?? ''}'), subtitle: Text('${s['matricule'] ?? ''}'), trailing: Text(s['present'] == true ? 'Present' : 'Absent'))),
       if (!_ended) SizedBox(height: 56, child: FilledButton.tonal(onPressed: _busy ? null : _endSession, child: const Text('End session'))),
+      if (_ended) SizedBox(height: 56, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => SessionReportScreen(session: widget.session, user: widget.user))), child: const Text('Export PDF'))),
     ])));
   }
 }
