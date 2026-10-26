@@ -6,6 +6,7 @@ import '../health_screen.dart';
 import '../models/app_user.dart';
 import '../services/session_service.dart';
 import 'ble_test_screen.dart';
+import 'courses_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const SizedBox(height: 20),
       _detail('Matricule', user?.matricule), _detail('Role', user?.role), _detail('Department', user?.departmentName), _detail('Year', user?.year.toString()),
       const SizedBox(height: 24),
+      SizedBox(height: 56, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const CoursesScreen())), child: const Text('My courses'))),
       SizedBox(height: 56, child: FilledButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const HealthScreen())), child: const Text('Connection check'))),
       OutlinedButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const BleTestScreen())), child: const Text('BLE test')),
     ]));
