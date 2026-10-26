@@ -483,12 +483,13 @@ class _BleTestScreenState extends State<BleTestScreen> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<_BroadcastMode>(
+          isExpanded: true,
           initialValue: _broadcastMode,
           decoration: const InputDecoration(labelText: 'Encoding to test'),
           items: const [
             DropdownMenuItem(
               value: _BroadcastMode.automatic,
-              child: Text('Automatic fallback (service → manufacturer → name)'),
+              child: Text('Automatic fallback (service → manufacturer → name)', overflow: TextOverflow.ellipsis, maxLines: 1),
             ),
             DropdownMenuItem(
               value: _BroadcastMode.serviceData,
