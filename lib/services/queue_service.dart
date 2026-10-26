@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
+import 'notification_service.dart';
 import 'session_service.dart';
 
 class QueueService extends ChangeNotifier with WidgetsBindingObserver {
@@ -61,6 +62,8 @@ class QueueService extends ChangeNotifier with WidgetsBindingObserver {
     if (_history.length > 50) _history.removeRange(50, _history.length);
     await _save();
     notifyListeners();
+    final detected = DateTime.tryParse(detectedAt);
+    if (detected != null) unawaited(NotificationService.instance.attendanceMarked(sessionCode: sessionCode, detectedAt: detected));
     unawaited(syncNow());
     return true;
   }
@@ -103,6 +106,8 @@ class QueueService extends ChangeNotifier with WidgetsBindingObserver {
     } catch (error) {
       lastSyncResult = 'Will retry. ${error is ApiException ? error.message : error}';
     } finally {
+      if (synced > 0) unawaited(NotificationService.instance.recordsSynced(synced));
+      for (final reason in reasons) { unawaited(NotificationService.instance.recordRejected(reason)); }
       _syncing = false;
       notifyListeners();
     }

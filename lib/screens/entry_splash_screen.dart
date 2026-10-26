@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/session_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import 'auth_screen.dart';
@@ -46,7 +47,10 @@ class _EntrySplashScreenState extends State<EntrySplashScreen> {
     }
     setState(() => _visible = false);
     await Future<void>.delayed(const Duration(milliseconds: 420));
-    if (mounted) Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => destination));
+    if (mounted) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => destination));
+      WidgetsBinding.instance.addPostFrameCallback((_) => NotificationService.instance.openPendingNotification());
+    }
   }
 
   Future<void> _waitForSession(SessionService session) {

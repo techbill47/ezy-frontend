@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/app_user.dart';
 import '../services/queue_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/offline_banner.dart';
@@ -19,10 +20,15 @@ class StudentHomeScreen extends StatefulWidget {
 
 class _StudentHomeScreenState extends State<StudentHomeScreen> {
   int _selectedTab = 0;
-  Future<void> _openListening() => Navigator.of(context).push(PageRouteBuilder<void>(opaque: true, transitionDuration: Duration.zero, reverseTransitionDuration: Duration.zero, pageBuilder: (_, _, _) => ListeningOverlayScreen(user: widget.user)));
+  Future<void> _openListening() async {
+    await NotificationService.instance.requestPermission(context);
+    if (!mounted) return;
+    await Navigator.of(context).push(PageRouteBuilder<void>(opaque: true, transitionDuration: Duration.zero, reverseTransitionDuration: Duration.zero, pageBuilder: (_, _, _) => ListeningOverlayScreen(user: widget.user)));
+  }
 
   @override
   Widget build(BuildContext context) => AppScaffold(
+    appBar: AppBar(title: const Text('EZY'), actions: [IconButton(tooltip: 'Settings', onPressed: () => Navigator.pushNamed(context, '/settings'), icon: const Icon(Icons.settings_outlined))]),
     bottomNavigationBar: NavigationBar(selectedIndex: _selectedTab, onDestinationSelected: (index) => setState(() => _selectedTab = index), destinations: const [NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'), NavigationDestination(icon: Icon(Icons.fact_check_outlined), selectedIcon: Icon(Icons.fact_check), label: 'My attendance')]),
     body: _selectedTab == 0 ? _homeBody(context) : MyAttendanceScreen(user: widget.user),
   );

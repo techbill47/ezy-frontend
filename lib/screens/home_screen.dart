@@ -89,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final firstName = user?.fullName.trim().split(RegExp(r'\s+')).first ?? 'Coordinator';
     final department = _departmentLoading ? 'Loading department…' : _departmentName ?? user?.departmentName ?? 'Department unavailable';
     return AppScaffold(
-      appBar: AppBar(title: const Text('EZY'), actions: [TextButton(onPressed: _logout, child: const Text('Logout'))]),
+      appBar: AppBar(title: const Text('EZY'), actions: [IconButton(tooltip: 'Settings', onPressed: () => Navigator.pushNamed(context, '/settings'), icon: const Icon(Icons.settings_outlined)), TextButton(onPressed: _logout, child: const Text('Logout'))]),
       body: Column(children: [
         OfflineBanner(role: user?.role ?? 'coordinator'),
         Expanded(child: ListView(padding: const EdgeInsets.fromLTRB(22, 26, 22, 28), children: [

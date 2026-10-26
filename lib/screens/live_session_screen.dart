@@ -6,6 +6,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../api/api_client.dart';
 import '../models/app_user.dart';
 import '../services/ble_service.dart';
+import '../services/notification_service.dart';
 import '../services/session_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/buttons.dart';
@@ -64,6 +65,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> with WidgetsBindi
       setState(() { _ended = true; _broadcasting = false; _notice = 'Session time is over. Advertising stopped.'; });
       _ble.stopAdvertising();
       WakelockPlus.disable();
+      unawaited(_notifySessionEnded());
     } else if (mounted) {
       setState(() {});
     }
@@ -75,6 +77,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> with WidgetsBindi
     try {
       await _ble.startAdvertising(context, widget.user.departmentId, widget.user.year, _code);
       if (!mounted) return;
+      unawaited(NotificationService.instance.clearBroadcastStopped(_id));
       setState(() { _broadcasting = true; _paused = false; _broadcastError = null; _takeover = true; });
       await _takeoverAnimation.forward(from: 0);
       if (mounted) setState(() => _takeover = false);
@@ -122,6 +125,7 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> with WidgetsBindi
       await WakelockPlus.disable();
       if (mounted) setState(() { _ended = true; _broadcasting = false; _notice = 'Session ended.'; });
       await _loadReport();
+      await _notifySessionEnded();
     } catch (error) { if (mounted) setState(() => _reportError = 'Could not end the session: $error'); }
     finally { if (mounted) setState(() => _ending = false); }
   }
@@ -129,7 +133,11 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> with WidgetsBindi
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
-      if (_broadcasting) { _ble.stopAdvertising(); if (mounted) setState(() { _broadcasting = false; _paused = true; }); }
+      if (_broadcasting) {
+        _ble.stopAdvertising();
+        if (!_ended && (_endsAt?.isAfter(DateTime.now()) ?? true)) unawaited(_notifyBroadcastStopped());
+        if (mounted) setState(() { _broadcasting = false; _paused = true; });
+      }
       WakelockPlus.disable();
     } else if (state == AppLifecycleState.resumed && mounted) {
       WakelockPlus.enable();
@@ -142,9 +150,13 @@ class _LiveSessionScreenState extends State<LiveSessionScreen> with WidgetsBindi
     WidgetsBinding.instance.removeObserver(this);
     _clock?.cancel(); _refreshTimer?.cancel(); _feedTimer?.cancel();
     _ambient.dispose(); _takeoverAnimation.dispose();
+    if (_broadcasting && !_ended && (_endsAt?.isAfter(DateTime.now()) ?? true)) unawaited(_notifyBroadcastStopped());
     _ble.stopAdvertising(); WakelockPlus.disable();
     super.dispose();
   }
+
+  Future<void> _notifySessionEnded() => NotificationService.instance.sessionEnded(sessionId: _id, present: _students.where((student) => student['present'] == true).length, total: _students.length, session: widget.session, course: widget.course);
+  Future<void> _notifyBroadcastStopped() => NotificationService.instance.broadcastStopped(sessionId: _id, session: widget.session, course: widget.course);
 
   String get _remaining {
     if (_endsAt == null) return '—';

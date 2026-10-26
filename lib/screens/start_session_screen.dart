@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/api_client.dart';
 import '../services/session_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/buttons.dart';
 import '../widgets/states.dart';
@@ -39,6 +40,8 @@ class _StartSessionScreenState extends State<StartSessionScreen> {
     final duration = _duration ?? int.tryParse(_customDuration.text.trim());
     if (_courseId == null) { setState(() => _error = 'Choose a course.'); return; }
     if (duration == null || duration < 1 || duration > 240) { setState(() => _error = 'Duration must be a whole number from 1 to 240 minutes.'); return; }
+    await NotificationService.instance.requestPermission(context);
+    if (!mounted) return;
     setState(() { _starting = true; _error = null; _notice = null; });
     final api = ApiClient(token: sessionService.token);
     try {
@@ -57,6 +60,9 @@ class _StartSessionScreenState extends State<StartSessionScreen> {
       final user = sessionService.user;
       if (!mounted) return;
       final selected = _courses.firstWhere((c) => '${c['id']}' == '${session['courseId'] ?? (session['course'] is Map ? session['course']['id'] : _courseId)}', orElse: () => session['course'] is Map ? Map<String, dynamic>.from(session['course']) : {'id': _courseId, 'code': 'Course', 'name': ''});
+      final endsAt = DateTime.tryParse('${session['endsAt'] ?? ''}');
+      if (endsAt != null) await NotificationService.instance.scheduleSessionReminder(sessionId: '${session['id'] ?? ''}', endsAt: endsAt, session: session, course: selected);
+      if (!mounted) return;
       await Navigator.push<void>(context, MaterialPageRoute<void>(builder: (_) => LiveSessionScreen(session: session, course: selected, user: user!, resumed: session['_activeSession'] == true)));
       if (mounted) setState(() => _notice = 'The live session screen was closed, so its BLE broadcast stopped. Tap Start session to resume an active session.');
     } catch (error) {
