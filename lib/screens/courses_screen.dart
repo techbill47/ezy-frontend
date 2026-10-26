@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/api_client.dart';
 import '../services/session_service.dart';
+import '../widgets/app_scaffold.dart';
+import '../widgets/buttons.dart';
+import '../widgets/offline_banner.dart';
+import '../widgets/states.dart';
+import '../widgets/surfaces.dart';
 import 'marks_conversion_screen.dart';
 
 class CoursesScreen extends StatefulWidget {
@@ -51,8 +56,35 @@ class _CoursesScreenState extends State<CoursesScreen> {
   @override
   Widget build(BuildContext context) {
     final isCoordinator = context.watch<SessionService>().user?.role == 'coordinator';
-    return Scaffold(appBar: AppBar(title: const Text('Courses')), floatingActionButton: isCoordinator ? FloatingActionButton.extended(onPressed: _saving ? null : _showAddForm, icon: const Icon(Icons.add), label: const Text('Add course')) : null,
-      body: RefreshIndicator(onRefresh: _load, child: _loading ? ListView(children: const [SizedBox(height: 250), Center(child: CircularProgressIndicator())]) : _error != null ? ListView(padding: const EdgeInsets.all(24), children: [Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)), const SizedBox(height: 12), OutlinedButton(onPressed: _load, child: const Text('Retry'))]) : _courses.isEmpty ? ListView(children: const [SizedBox(height: 180), Center(child: Text('No courses yet.'))]) : ListView.separated(padding: const EdgeInsets.all(16), itemCount: _courses.length, separatorBuilder: (_, _) => const Divider(), itemBuilder: (context, i) { final course = _courses[i]; return ListTile(title: Text('${course['code'] ?? ''}'), subtitle: Text('${course['name'] ?? ''}'), trailing: isCoordinator ? TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => MarksConversionScreen(course: course, user: context.read<SessionService>().user!))), child: const Text('Convert to marks')) : null); })),
+    return AppScaffold(
+      appBar: AppBar(title: const Text('My courses')),
+      floatingActionButton: isCoordinator ? FloatingActionButton.extended(onPressed: _saving ? null : _showAddForm, icon: const Icon(Icons.add), label: const Text('Add course')) : null,
+      body: Column(children: [
+        OfflineBanner(role: context.read<SessionService>().user?.role ?? 'student'),
+        Expanded(child: RefreshIndicator(onRefresh: _load, child: _loading
+          ? ListView(padding: const EdgeInsets.all(20), children: const [SkeletonList(count: 5)])
+          : _error != null
+            ? ListView(children: [SizedBox(height: MediaQuery.sizeOf(context).height * .18), ErrorState(message: _error!, onRetry: _load, title: 'Courses unavailable')])
+            : _courses.isEmpty
+              ? ListView(children: [SizedBox(height: MediaQuery.sizeOf(context).height * .18), EmptyState(icon: Icons.menu_book_outlined, title: 'No courses yet', message: isCoordinator ? 'Add your first course to get started.' : 'Your class courses will appear here when they are available.', actionLabel: isCoordinator ? 'Add course' : null, onAction: isCoordinator ? _showAddForm : null)])
+              : ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 90), children: [
+                  Text('Courses for your class', style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 8),
+                  ..._courses.map((course) => AppCard(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Container(width: 46, height: 46, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: .12), borderRadius: BorderRadius.circular(14)), child: Icon(Icons.menu_book_outlined, color: Theme.of(context).colorScheme.primary)),
+                        const SizedBox(width: 13),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${course['code'] ?? ''}', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 3), Text('${course['name'] ?? ''}', style: Theme.of(context).textTheme.bodyMedium)])),
+                      ]),
+                      if (isCoordinator) ...[
+                        const SizedBox(height: 12),
+                        Align(alignment: Alignment.centerRight, child: SecondaryButton(label: 'Convert to marks', icon: Icons.table_chart_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => MarksConversionScreen(course: course, user: context.read<SessionService>().user!))))),
+                      ],
+                    ]),
+                  )),
+                ]))),
+      ]),
     );
   }
 }

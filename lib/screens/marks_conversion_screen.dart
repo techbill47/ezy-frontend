@@ -6,6 +6,11 @@ import '../api/api_client.dart';
 import '../models/app_user.dart';
 import '../services/pdf_service.dart';
 import '../services/session_service.dart';
+import '../widgets/app_scaffold.dart';
+import '../widgets/buttons.dart';
+import '../widgets/offline_banner.dart';
+import '../widgets/states.dart';
+import '../widgets/surfaces.dart';
 
 class MarksConversionScreen extends StatefulWidget {
   const MarksConversionScreen({super.key, required this.course, required this.user});
@@ -14,6 +19,7 @@ class MarksConversionScreen extends StatefulWidget {
   @override
   State<MarksConversionScreen> createState() => _MarksConversionScreenState();
 }
+
 class _MarksConversionScreenState extends State<MarksConversionScreen> {
   static const _options = [5, 10, 15, 20, 30];
   final _customController = TextEditingController();
@@ -73,22 +79,79 @@ class _MarksConversionScreenState extends State<MarksConversionScreen> {
   void dispose() { _requestVersion++; _customController.dispose(); super.dispose(); }
 
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Convert to marks')), body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
-    Text('$_courseCode — $_courseName', style: Theme.of(context).textTheme.titleLarge),
-    Text('$_departmentName — Year $_year'),
-    const SizedBox(height: 12), Text('Maximum marks', style: Theme.of(context).textTheme.titleMedium),
-    Wrap(spacing: 8, children: [for (final value in _options) ChoiceChip(label: Text('$value'), selected: !_custom && _maximum == value, onSelected: (_) => _chooseMaximum(value))]),
-    TextButton(onPressed: () => setState(() => _custom = true), child: const Text('Custom maximum')),
-    if (_custom) Row(children: [Expanded(child: TextField(controller: _customController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Maximum (1–100)'), onSubmitted: (_) => _applyCustom())), const SizedBox(width: 8), FilledButton(onPressed: _applyCustom, child: const Text('Apply'))]),
-    const SizedBox(height: 12),
-    if (_loading) const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
-    else if (_error != null) ...[Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)), OutlinedButton(onPressed: _load, child: const Text('Retry'))]
-    else ...[
-      Text('Maximum: $_maximum    Total sessions held: $_totalSessions', style: Theme.of(context).textTheme.titleMedium),
-      if (_totalSessions == 0) const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('No sessions held yet.')),
-      if (_students.isEmpty) const Text('No students in this class yet.') else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(columns: const [DataColumn(label: Text('Matricule')), DataColumn(label: Text('Name')), DataColumn(label: Text('Attended/Total')), DataColumn(label: Text('%')), DataColumn(label: Text('Marks'))], rows: [for (final student in _students) DataRow(cells: [DataCell(Text('${student['matricule'] ?? ''}')), DataCell(Text('${student['fullName'] ?? ''}')), DataCell(Text('${student['attended'] ?? 0}/$_totalSessions')), DataCell(Text('${_display(student['percentage'] ?? 0)}%')), DataCell(Text('${_display(student['marks'] ?? 0)} / $_maximum'))])])),
-      const SizedBox(height: 16), Wrap(spacing: 8, runSpacing: 8, children: [FilledButton.icon(onPressed: _exporting ? null : _sharePdf, icon: const Icon(Icons.share), label: const Text('Share PDF')), OutlinedButton.icon(onPressed: _exporting ? null : _savePdf, icon: const Icon(Icons.save_alt), label: const Text('Save PDF'))]),
-      if (_exporting) const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
-    ],
-  ])));
+  Widget build(BuildContext context) => AppScaffold(
+    appBar: AppBar(title: const Text('Convert to marks')),
+    body: Column(children: [
+      const OfflineBanner(role: 'coordinator'),
+      Expanded(child: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), children: [
+        AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('$_courseCode — $_courseName', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 6),
+          Text('$_departmentName  •  Year $_year', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const SizedBox(height: 18),
+          const SectionHeader('Maximum marks'),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 8, children: [for (final value in _options) ChoiceChip(label: Text('$value'), selected: !_custom && _maximum == value, onSelected: (_) => _chooseMaximum(value))]),
+          const SizedBox(height: 8),
+          if (_custom) Row(children: [Expanded(child: TextField(controller: _customController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Custom maximum', hintText: 'Enter 1 to 100', suffixText: '/ 100'), onSubmitted: (_) => _applyCustom())), const SizedBox(width: 9), PrimaryButton(label: 'Apply', onPressed: _applyCustom)]) else TextButton(onPressed: () => setState(() => _custom = true), child: const Text('Choose a custom maximum')),
+        ])),
+        const SizedBox(height: 8),
+        if (_loading) const AppCard(child: SkeletonList(count: 6))
+        else if (_error != null) ErrorState(title: 'Marks unavailable', message: _error!, onRetry: _load)
+        else ...[
+          AppCard(child: Row(children: [Expanded(child: InfoRow(label: 'Maximum', value: '$_maximum marks')), Expanded(child: InfoRow(label: 'Sessions held', value: '$_totalSessions'))])),
+          if (_totalSessions == 0) const AppCard(child: EmptyState(icon: Icons.event_busy_outlined, title: 'No sessions held yet', message: 'Marks will be available after this course has held a session.'))
+          else if (_students.isEmpty) const AppCard(child: EmptyState(icon: Icons.people_outline, title: 'No students found', message: 'There are no students listed for this course.'))
+          else AppCard(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const SectionHeader('Student marks', subtitle: 'Scroll the table to view all columns and students'),
+            const SizedBox(height: 10),
+            SizedBox(height: 430, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SizedBox(width: 652, child: CustomScrollView(slivers: [
+              SliverPersistentHeader(pinned: true, delegate: _MarksHeaderDelegate(Theme.of(context).colorScheme)),
+              SliverList(delegate: SliverChildBuilderDelegate((context, index) {
+                final student = _students[index];
+                return _MarksRow(index: index, matricule: '${student['matricule'] ?? ''}', name: '${student['fullName'] ?? ''}', attendance: '${student['attended'] ?? 0}/$_totalSessions', percent: '${_display(student['percentage'] ?? 0)}%', marks: '${_display(student['marks'] ?? 0)} / $_maximum');
+              }, childCount: _students.length)),
+            ])))),
+          ])),
+          const SizedBox(height: 14),
+          AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const SectionHeader('Export marks sheet', subtitle: 'Create a PDF to share or save'),
+            const SizedBox(height: 12),
+            PrimaryButton(label: 'Share PDF', icon: Icons.share_outlined, loading: _exporting, onPressed: _exporting ? null : _sharePdf),
+            const SizedBox(height: 8), SecondaryButton(label: 'Save PDF', icon: Icons.save_alt, onPressed: _exporting ? null : _savePdf),
+          ])),
+        ],
+      ]))),
+    ]),
+  );
 }
+
+class _MarksHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _MarksHeaderDelegate(this.scheme);
+  final ColorScheme scheme;
+  @override
+  double get minExtent => 48;
+  @override
+  double get maxExtent => 48;
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => Container(color: scheme.surfaceContainerHighest, child: Row(children: [
+    _tableCell('No.', 44, header: true), _tableCell('Matricule', 112, header: true), _tableCell('Full name', 164, header: true), _tableCell('Attended / total', 112, header: true), _tableCell('%', 76, header: true), _tableCell('Marks', 110, header: true, color: scheme.primary),
+  ]));
+  @override
+  bool shouldRebuild(covariant _MarksHeaderDelegate oldDelegate) => oldDelegate.scheme != scheme;
+}
+
+class _MarksRow extends StatelessWidget {
+  const _MarksRow({required this.index, required this.matricule, required this.name, required this.attendance, required this.percent, required this.marks});
+  final int index;
+  final String matricule, name, attendance, percent, marks;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(height: 56, decoration: BoxDecoration(color: index.isEven ? scheme.surface : scheme.surfaceContainerHighest.withValues(alpha: .4), border: Border(bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: .6)))), child: Row(children: [
+      _tableCell('${index + 1}', 44), _tableCell(matricule, 112), _tableCell(name, 164), _tableCell(attendance, 112), _tableCell(percent, 76), _tableCell(marks, 110, color: scheme.primary),
+    ]));
+  }
+}
+
+Widget _tableCell(String value, double width, {bool header = false, Color? color}) => SizedBox(width: width, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text(value, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: header ? 11 : 12, fontWeight: header || color != null ? FontWeight.w700 : FontWeight.w500, color: color))));
