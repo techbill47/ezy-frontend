@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/api_client.dart';
+import '../config.dart';
 import '../models/app_user.dart';
 import '../services/session_service.dart';
 import '../theme/app_theme.dart';
@@ -20,20 +21,78 @@ class _AuthScreenState extends State<AuthScreen> {
   final _form = GlobalKey<FormState>();
   final _matricule = TextEditingController(), _name = TextEditingController(), _phone = TextEditingController(), _pin = TextEditingController(), _coordinatorCode = TextEditingController();
   bool _register = false, _loading = false, _showPin = false;
+  bool _departmentsLoading = true;
   String _role = 'student';
   int _year = 1;
   int? _departmentId;
   List<Map<String, dynamic>> _departments = [];
+  String? _departmentsError;
   String? _error;
 
   @override
   void initState() { super.initState(); _register = widget.startAtRegistration; _loadDepartments(); }
   Future<void> _loadDepartments() async {
+    if (!mounted) return;
+    setState(() { _departmentsLoading = true; _departmentsError = null; });
     try {
       final data = await ApiClient().get('/api/departments');
-      if (data is List && mounted) setState(() { _departments = data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList(); });
-    } catch (_) { /* Login remains available if the department list cannot load. */ }
+      if (data is! List) throw ApiException('Could not load departments. Please try again.');
+      final departments = data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      if (departments.isEmpty) throw ApiException('No departments are available. Please try again later.');
+      if (mounted) {
+        setState(() {
+          _departments = departments;
+          if (!_departments.any((department) => int.tryParse('${department['id']}') == _departmentId)) _departmentId = null;
+        });
+      }
+    } catch (error) {
+      if (mounted) setState(() => _departmentsError = error is ApiException ? error.message : 'Could not load departments. Please try again.');
+    } finally {
+      if (mounted) setState(() => _departmentsLoading = false);
+    }
   }
+
+  void _toggleRegister() {
+    if (_loading) return;
+    final registering = !_register;
+    setState(() { _register = registering; _error = null; });
+    if (registering && _departments.isEmpty && !_departmentsLoading) _loadDepartments();
+  }
+
+  Widget _departmentField() {
+    if (_departmentsLoading) {
+      return DropdownButtonFormField<int>(
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Department', prefixIcon: Icon(Icons.account_balance_outlined), suffixIcon: Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))),
+        hint: const Text('Loading departments...'),
+        items: const [],
+        onChanged: null,
+        validator: (v) => v == null ? 'Choose a department.' : null,
+      );
+    }
+    if (_departmentsError != null) {
+      final theme = Theme.of(context);
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        InputDecorator(
+          decoration: const InputDecoration(labelText: 'Department', prefixIcon: Icon(Icons.account_balance_outlined)),
+          child: Row(children: [
+            Expanded(child: Text(_departmentsError!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error))),
+            TextButton(onPressed: _loading ? null : _loadDepartments, child: const Text('Retry')),
+          ]),
+        ),
+        Padding(padding: const EdgeInsets.only(left: 12, top: 4), child: Text('Server: $apiBaseUrl', style: theme.textTheme.bodySmall)),
+      ]);
+    }
+    return DropdownButtonFormField<int>(
+      isExpanded: true,
+      initialValue: _departmentId,
+      decoration: const InputDecoration(labelText: 'Department', prefixIcon: Icon(Icons.account_balance_outlined)),
+      items: _departments.map((d) => DropdownMenuItem(value: int.tryParse('${d['id']}'), child: Text('${d['name']}', overflow: TextOverflow.ellipsis))).toList(),
+      onChanged: _loading ? null : (v) => setState(() => _departmentId = v),
+      validator: (v) => v == null ? 'Choose a department.' : null,
+    );
+  }
+
   String? _required(String? value) => value == null || value.trim().isEmpty ? 'This field is required.' : null;
   String? _pinValidation(String? value) => value == null || !RegExp(r'^\d{4}$').hasMatch(value) ? 'Enter exactly 4 digits.' : null;
 
@@ -46,11 +105,15 @@ class _AuthScreenState extends State<AuthScreen> {
       final body = <String, dynamic>{'matricule': _matricule.text, 'pin': _pin.text};
       if (_register) {
         body.addAll({'fullName': _name.text.trim(), 'phone': _phone.text.trim(), 'departmentId': _departmentId, 'year': _year, 'role': _role});
-        if (_role == 'coordinator') body['coordinatorCode'] = _coordinatorCode.text.trim();
+        if (_role == 'coordinator') {
+          body['coordinatorCode'] = _coordinatorCode.text.trim();
+        }
       }
       final result = await ApiClient().post(_register ? '/api/auth/register' : '/api/auth/login', body) as Map<String, dynamic>;
       await session.save(result['token'] as String, AppUser.fromJson(Map<String, dynamic>.from(result['user'] as Map)));
-      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/home', (_) => false);
+      }
     } catch (error) { if (mounted) setState(() => _error = error.toString()); }
     finally { if (mounted) setState(() => _loading = false); }
   }
@@ -74,7 +137,7 @@ class _AuthScreenState extends State<AuthScreen> {
         const SizedBox(height: 14),
         AppTextField(controller: _phone, label: 'Phone', keyboardType: TextInputType.phone, prefixIcon: Icons.phone_outlined, validator: _required),
         const SizedBox(height: 18),
-        DropdownButtonFormField<int>(isExpanded: true, initialValue: _departmentId, decoration: const InputDecoration(labelText: 'Department', prefixIcon: Icon(Icons.account_balance_outlined)), items: _departments.map((d) => DropdownMenuItem(value: int.tryParse('${d['id']}'), child: Text('${d['name']}', overflow: TextOverflow.ellipsis))).toList(), onChanged: _loading ? null : (v) => setState(() => _departmentId = v), validator: (v) => v == null ? 'Choose a department.' : null),
+        _departmentField(),
         const SizedBox(height: 18),
         Text('Year of study', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 7),
@@ -96,7 +159,7 @@ class _AuthScreenState extends State<AuthScreen> {
       SizedBox(height: 68, child: _error == null ? const SizedBox.shrink() : Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: BoxDecoration(color: Theme.of(context).colorScheme.errorContainer, borderRadius: BorderRadius.circular(14), border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: .4))), child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [Icon(Icons.error_outline, color: Theme.of(context).colorScheme.onErrorContainer), const SizedBox(width: 10), Expanded(child: Text(_error!, maxLines: 3, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onErrorContainer)))]))),
       PrimaryButton(label: _register ? 'Create account' : 'Sign in', loading: _loading, onPressed: _loading ? null : _submit),
       const SizedBox(height: 8),
-      TextButton(onPressed: _loading ? null : () => setState(() { _register = !_register; _error = null; }), child: Text(_register ? 'Already have an account? Sign in' : 'New to EZY? Create an account')),
+      TextButton(onPressed: _loading ? null : _toggleRegister, child: Text(_register ? 'Already have an account? Sign in' : 'New to EZY? Create an account')),
     ]))),
   );
 
