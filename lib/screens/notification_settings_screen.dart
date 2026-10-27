@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/notification_service.dart';
+import '../services/session_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/surfaces.dart';
 
@@ -32,6 +34,22 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     if (mounted) setState(() => _sessionEnabled = enabled);
   }
 
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log out of EZY?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Log out')),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    await context.read<SessionService>().clear();
+    if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+  }
+
   @override
   Widget build(BuildContext context) => AppScaffold(
     appBar: AppBar(title: const Text('Settings')),
@@ -42,6 +60,19 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       const SizedBox(height: 16),
       AppCard(padding: EdgeInsets.zero, child: SwitchListTile(title: const Text('Attendance'), subtitle: const Text('Marks, sync updates, and rejected records'), value: _attendanceEnabled, onChanged: _setAttendance)),
       AppCard(padding: EdgeInsets.zero, child: SwitchListTile(title: const Text('Session'), subtitle: const Text('Ending reminders and coordinator session status'), value: _sessionEnabled, onChanged: _setSession)),
+      const SizedBox(height: 20),
+      const Divider(),
+      const SizedBox(height: 12),
+      Text('Account', style: Theme.of(context).textTheme.headlineSmall),
+      const SizedBox(height: 12),
+      AppCard(
+        onTap: _confirmLogout,
+        child: Row(children: [
+          Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+          const SizedBox(width: 14),
+          Expanded(child: Text('Log out', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.error))),
+        ]),
+      ),
     ]),
   );
 }

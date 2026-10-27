@@ -37,6 +37,7 @@ class _ListeningOverlayScreenState extends State<ListeningOverlayScreen> with Ti
   void initState() { super.initState(); WidgetsBinding.instance.addPostFrameCallback((_) => _scan()); }
 
   Future<void> _scan() async {
+    final started = DateTime.now();
     if (_scanning) return;
     _cancelled = false;
     setState(() { _phase = 'Checking Bluetooth'; _result = null; _error = null; _diagnostic = null; _detectedAt = null; _sessionCode = null; _scanning = true; });
@@ -49,6 +50,8 @@ class _ListeningOverlayScreenState extends State<ListeningOverlayScreen> with Ti
       });
       if (!mounted || _cancelled) return;
       if (signal == null) {
+        await _holdMinimumListening(started);
+        if (!mounted || _cancelled) return;
         _setResult(_ble.heardOtherClass ? _ScanResult.wrongClass : _ScanResult.notFound);
       } else {
         final detectedAt = DateTime.now().toUtc().toIso8601String();
@@ -56,6 +59,8 @@ class _ListeningOverlayScreenState extends State<ListeningOverlayScreen> with Ti
         await context.read<QueueService>().addMark(signal.code, detectedAt, widget.user.id);
         if (!mounted || _cancelled) return;
         _detectedAt = detectedAt;
+        await _holdMinimumListening(started);
+        if (!mounted || _cancelled) return;
         _setResult(_ScanResult.marked);
         _check.forward(from: 0);
       }
@@ -64,15 +69,24 @@ class _ListeningOverlayScreenState extends State<ListeningOverlayScreen> with Ti
       final message = error.toString();
       if (message.contains('none was an EZY session')) {
         _diagnostic = message;
+        await _holdMinimumListening(started);
+        if (!mounted || _cancelled) return;
         _setResult(_ScanResult.notFound);
       } else {
         _error = message;
+        await _holdMinimumListening(started);
+        if (!mounted || _cancelled) return;
         _setResult(_ScanResult.error);
       }
     } finally {
       if (mounted && !_cancelled) setState(() => _scanning = false);
       if (!_cancelled) { _countdown.stop(); _rings.stop(); _pulse.stop(); }
     }
+  }
+
+  Future<void> _holdMinimumListening(DateTime started) async {
+    final remaining = const Duration(seconds: 3) - DateTime.now().difference(started);
+    if (remaining > Duration.zero) await Future<void>.delayed(remaining);
   }
 
   void _setResult(_ScanResult result) {
